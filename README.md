@@ -1,7 +1,7 @@
 # Project: URL shortener
 
 The goal of this project is to implement the storage backend for a transactional URL shortener service (c.f. [bit.ly](https://bit.ly)).
-The backend should be fault tolerant and ensure that URLs produce a consistent short value.
+The backend should be fault-tolerant and ensure that URLs produce a consistent short value.
 
 ## Implementation
 
@@ -51,7 +51,7 @@ az container create --memory 4 ...
    * How long does it take to elect a new leader?
    * Measure the impact of election timeouts. Investigate what happens when it gets too short / too long.
 * Analyze the load of your nodes:
-   * How much resources do your nodes use?
+   * How many resources do your nodes use?
    * Where do inserts create most load?
    * Do lookups distribute the load evenly among replicas?
 * How many nodes should you use for this system? What are their roles?
