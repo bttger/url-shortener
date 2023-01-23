@@ -2,7 +2,8 @@
 
 ## Build and run
 ```sh
-go build -o urlshortener ./cmd/urlshortener
+chmod u+x startRaftCluster
+./startRaftCluster
 ```
 
 ## Describe the design of your system

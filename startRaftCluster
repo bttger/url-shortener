@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+
+CLUSTER_SIZE=5
+for (( i=1; i<=CLUSTER_SIZE; i++ ));do
+    START_PORT=9200 NODE_ID=$i CLUSTER_SIZE=$CLUSTER_SIZE go run ./cmd/joinNode/main.go &
+done
+
+wait
