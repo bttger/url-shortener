@@ -26,24 +26,13 @@ func Start(port int, store *URLStore, raftNode *raft.Node) {
 		store: store,
 		rn:    raftNode,
 	}
-	http.HandleFunc("/", s.get)
-	http.HandleFunc("/add", s.post)
+	http.HandleFunc("/", s.handle)
 	portStr := strconv.Itoa(port)
 	utils.Logf("Starting HTTP server on port %s", portStr)
 	log.Fatal(http.ListenAndServe(":"+portStr, nil))
 }
 
-func (s *Server) get(w http.ResponseWriter, r *http.Request) {
-	nanoid := strings.Split(r.URL.Path, "/")[1]
-	url, ok := s.store.GetURL(nanoid)
-	if !ok {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	http.Redirect(w, r, url, http.StatusFound)
-}
-
-func (s *Server) post(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		body, err := io.ReadAll(r.Body)
 		if err != nil {
@@ -68,5 +57,13 @@ func (s *Server) post(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusRequestTimeout)
 			utils.Logf("Timeout on POST request for url %s", url)
 		}
+	} else if r.Method == "GET" {
+		nanoid := strings.Split(r.URL.Path, "/")[1]
+		url, ok := s.store.GetURL(nanoid)
+		if !ok {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		http.Redirect(w, r, url, http.StatusFound)
 	}
 }
