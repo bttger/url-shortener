@@ -2,8 +2,8 @@
 
 ## Build and run
 ```sh
-chmod u+x startRaftCluster
-./startRaftCluster
+chmod u+x startRaftCluster.sh
+./startRaftCluster.sh
 ```
 
 ## Describe the design of your system
