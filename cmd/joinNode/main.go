@@ -17,10 +17,14 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Spawn a new finite-state machine
 	commitChan := make(chan *urlShortener.FSMInputRequest)
 	store := urlShortener.NewURLStore()
+	// Let it listen for new committed inputs
 	go store.ListenToNewCommits(commitChan)
+	// Start a new Raft node
 	raftNode := raft.NewNode(nodeId, clusterSize, usePortsFrom, commitChan)
 	raftNode.Start()
+	// Start the HTTP server to handle client requests
 	err = urlShortener.Start(usePortsFrom+nodeId-1, store, raftNode)
 }
