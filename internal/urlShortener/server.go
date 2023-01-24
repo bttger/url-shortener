@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 )
 
@@ -18,20 +17,22 @@ const (
 
 type Server struct {
 	store *URLStore
-	rn    *raft.RaftNode
+	rn    *raft.Node
 }
 
-func Start(port int, store *URLStore, raftNode *raft.RaftNode) error {
+func Start(port int, store *URLStore, raftNode *raft.Node) error {
 	s := &Server{
 		store: store,
 		rn:    raftNode,
 	}
 	http.HandleFunc("/", s.get)
 	http.HandleFunc("/add", s.post)
-	err := http.ListenAndServe(":"+strconv.Itoa(port), nil)
+	portStr := strconv.Itoa(port)
+	err := http.ListenAndServe(":"+portStr, nil)
 	if err != nil {
 		return err
 	}
+	utils.Logf("HTTP Server started on port %s", portStr)
 	return nil
 }
 
@@ -53,27 +54,20 @@ func (s *Server) post(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		url := string(body)
-		respChannel := make(chan string)
-		fsmInputReq := &FSMInputRequest{
-			Mutex:       sync.Mutex{},
-			Url:         url,
-			TimedOut:    false,
-			RespChannel: respChannel,
-		}
-		s.rn.Submit(fsmInputReq)
+		respChannel := make(chan interface{})
+		fsmInput := raft.NewFSMInput(url, respChannel)
+		s.rn.Submit(fsmInput)
 
 		// Wait for the response from the leader or timeout after PostTimeout seconds
 		select {
 		case res := <-respChannel:
 			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(res))
+			_, err := w.Write([]byte(res.(string)))
 			if err != nil {
 				utils.Logf("Error writing response: %v", err)
 			}
 		case <-time.After(PostTimeout * time.Second):
-			fsmInputReq.Lock()
-			fsmInputReq.TimedOut = true
-			fsmInputReq.Unlock()
+			fsmInput.SetClientConnected(false)
 			w.WriteHeader(http.StatusRequestTimeout)
 			utils.Logf("Timeout on POST request for url %s", url)
 		}

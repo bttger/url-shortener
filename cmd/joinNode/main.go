@@ -8,23 +8,26 @@ import (
 	"strconv"
 )
 
+// Required environment variables:
+// NODE_ID=number (starting at 1)
+// CLUSTER_SIZE=number
+// USE_PORTS_FROM=number
 func main() {
-	usePortsFrom, err := strconv.Atoi(os.Getenv("USE_PORTS_FROM"))
 	nodeId, err := strconv.Atoi(os.Getenv("NODE_ID"))
 	clusterSize, err := strconv.Atoi(os.Getenv("CLUSTER_SIZE"))
+	usePortsFrom, err := strconv.Atoi(os.Getenv("USE_PORTS_FROM"))
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("Please set the environment variables NODE_ID, CLUSTER_SIZE and USE_PORTS_FROM")
 		os.Exit(1)
 	}
 
-	// Spawn a new finite-state machine
-	commitChan := make(chan *urlShortener.FSMInputRequest)
+	// Spawn a new finite-state machine and let it listen for new committed inputs
+	commitChan := make(chan *raft.FSMInput)
 	store := urlShortener.NewURLStore()
-	// Let it listen for new committed inputs
 	go store.ListenToNewCommits(commitChan)
-	// Start a new Raft node
+	// Join a new node in a Raft cluster and publish committed log entries to the commit channel
 	raftNode := raft.NewNode(nodeId, clusterSize, usePortsFrom, commitChan)
-	raftNode.Start()
+	raftNode.JoinCluster()
 	// Start the HTTP server to handle client requests
 	err = urlShortener.Start(usePortsFrom+nodeId-1, store, raftNode)
 }

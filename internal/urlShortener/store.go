@@ -1,18 +1,11 @@
 package urlShortener
 
 import (
+	"github.com/bttger/url-shortener/internal/raft"
+	"github.com/bttger/url-shortener/internal/utils"
 	gonanoid "github.com/matoous/go-nanoid"
 	"sync"
 )
-
-// FSMInputRequest represents a client request to apply some input to the URLStore state machine.
-type FSMInputRequest struct {
-	sync.Mutex
-	Url      string
-	TimedOut bool
-	// RespChannel is a channel that the leader will write the nanoid of the added URL to
-	RespChannel chan string
-}
 
 // URLStore represents the state machine that stores the URL mappings.
 type URLStore struct {
@@ -46,13 +39,13 @@ func (s *URLStore) AddURL(url string) string {
 	return nanoid
 }
 
-func (s *URLStore) ListenToNewCommits(commitChan <-chan *FSMInputRequest) {
+func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMInput) {
 	for {
 		fsmInput := <-commitChan
-		fsmInput.Lock()
-		if !fsmInput.TimedOut {
-			fsmInput.RespChannel <- s.AddURL(fsmInput.Url)
-		}
-		fsmInput.Unlock()
+		utils.Logf("Received new committed input: %s", fsmInput.GetInput())
+		url := fsmInput.GetInput()
+		nanoid := s.AddURL(url.(string))
+		utils.Logf("Added new URL mapping: %s -> %s", nanoid, url)
+		fsmInput.Reply(nanoid)
 	}
 }
