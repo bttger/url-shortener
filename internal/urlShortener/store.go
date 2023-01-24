@@ -15,6 +15,7 @@ type URLStore struct {
 }
 
 func NewURLStore() *URLStore {
+	utils.Logf("Initializing URLStore")
 	return &URLStore{
 		urls: make(map[string]string),
 	}
@@ -40,6 +41,7 @@ func (s *URLStore) AddURL(url string) string {
 }
 
 func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMInput) {
+	utils.Logf("URLStore: start listening to new commits")
 	for {
 		fsmInput := <-commitChan
 		utils.Logf("Received new committed input: %s", fsmInput.GetInput())

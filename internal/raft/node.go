@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"github.com/bttger/url-shortener/internal/utils"
 	"net/rpc"
 	"time"
 )
@@ -14,6 +15,7 @@ type Node struct {
 }
 
 func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMInput) *Node {
+	utils.Logf("Initializing Raft node")
 	return &Node{
 		id:           id,
 		clusterSize:  clusterSize,
@@ -24,6 +26,7 @@ func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMInput) *Node
 }
 
 func (n *Node) JoinCluster() {
+	utils.Logf("Joining cluster with %d nodes", n.clusterSize)
 	// TODO
 }
 

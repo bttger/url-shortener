@@ -29,5 +29,5 @@ func main() {
 	raftNode := raft.NewNode(nodeId, clusterSize, usePortsFrom, commitChan)
 	raftNode.JoinCluster()
 	// Start the HTTP server to handle client requests
-	err = urlShortener.Start(usePortsFrom+nodeId-1, store, raftNode)
+	urlShortener.Start(usePortsFrom+nodeId-1, store, raftNode)
 }

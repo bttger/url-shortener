@@ -4,6 +4,7 @@ import (
 	"github.com/bttger/url-shortener/internal/raft"
 	"github.com/bttger/url-shortener/internal/utils"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -20,7 +21,7 @@ type Server struct {
 	rn    *raft.Node
 }
 
-func Start(port int, store *URLStore, raftNode *raft.Node) error {
+func Start(port int, store *URLStore, raftNode *raft.Node) {
 	s := &Server{
 		store: store,
 		rn:    raftNode,
@@ -28,12 +29,8 @@ func Start(port int, store *URLStore, raftNode *raft.Node) error {
 	http.HandleFunc("/", s.get)
 	http.HandleFunc("/add", s.post)
 	portStr := strconv.Itoa(port)
-	err := http.ListenAndServe(":"+portStr, nil)
-	if err != nil {
-		return err
-	}
-	utils.Logf("HTTP Server started on port %s", portStr)
-	return nil
+	utils.Logf("Starting HTTP server on port %s", portStr)
+	log.Fatal(http.ListenAndServe(":"+portStr, nil))
 }
 
 func (s *Server) get(w http.ResponseWriter, r *http.Request) {
