@@ -41,8 +41,8 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		url := string(body)
 		respChannel := make(chan interface{})
-		fsmInput := raft.NewFSMInput(url, respChannel)
-		s.rn.Submit(fsmInput)
+		fsmCommand := raft.NewFSMCommand(url, respChannel)
+		s.rn.Submit(fsmCommand)
 
 		// Wait for the response from the leader or timeout after PostTimeout seconds
 		select {
@@ -53,7 +53,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 				utils.Logf("Error writing response: %v", err)
 			}
 		case <-time.After(PostTimeout * time.Second):
-			fsmInput.SetClientConnected(false)
+			fsmCommand.SetClientConnected(false)
 			w.WriteHeader(http.StatusRequestTimeout)
 			utils.Logf("Timeout on POST request for url %s", url)
 		}

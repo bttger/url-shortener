@@ -21,13 +21,15 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Spawn a new finite-state machine and let it listen for new committed inputs
-	commitChan := make(chan *raft.FSMInput)
+	// Create a new finite-state machine and let it listen for new committed commands
+	commitChan := make(chan *raft.FSMCommand)
 	store := urlShortener.NewURLStore()
 	go store.ListenToNewCommits(commitChan)
+
 	// Join a new node in a Raft cluster and publish committed log entries to the commit channel
 	raftNode := raft.NewNode(nodeId, clusterSize, usePortsFrom, commitChan)
 	raftNode.JoinCluster()
+
 	// Start the HTTP server to handle client requests
 	urlShortener.Start(usePortsFrom+nodeId-1, store, raftNode)
 }

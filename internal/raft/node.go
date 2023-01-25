@@ -19,12 +19,12 @@ type Node struct {
 	id           int
 	clusterSize  int
 	usePortsFrom int
-	commitChan   chan *FSMInput
+	commitChan   chan *FSMCommand
 	cm           *ConsensusModule
 	peers        map[int]*rpc.Client
 }
 
-func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMInput) *Node {
+func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMCommand) *Node {
 	utils.Logf("Initializing Raft node")
 	node := &Node{
 		id:           id,
@@ -82,10 +82,10 @@ func (n *Node) connectToPeer(id int) {
 	utils.Logf("RPC: connected to node %d", id)
 }
 
-func (n *Node) Submit(input *FSMInput) {
+func (n *Node) Submit(command *FSMCommand) {
 	go func() {
-		// TODO send input to leader's appendEntries backlog which in turn will send it to the commitChan
-		n.commitChan <- input
+		// TODO send command to leader's appendEntries backlog which in turn will send it to the commitChan
+		n.commitChan <- command
 	}()
 }
 

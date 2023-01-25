@@ -7,7 +7,7 @@ import (
 	"sync"
 )
 
-// URLStore represents the state machine that stores the URL mappings.
+// URLStore represents the finite-state machine that stores the URL mappings.
 type URLStore struct {
 	sync.Mutex
 	// Map from nanoid to long URL
@@ -40,14 +40,14 @@ func (s *URLStore) AddURL(url string) string {
 	return nanoid
 }
 
-func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMInput) {
+func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMCommand) {
 	utils.Logf("URLStore: start listening to new commits")
 	for {
-		fsmInput := <-commitChan
-		utils.Logf("Received new committed input: %s", fsmInput.GetInput())
-		url := fsmInput.GetInput()
+		fsmCommand := <-commitChan
+		utils.Logf("Received new committed command: %s", fsmCommand.GetCommand())
+		url := fsmCommand.GetCommand()
 		nanoid := s.AddURL(url.(string))
 		utils.Logf("Added new URL mapping: %s -> %s", nanoid, url)
-		fsmInput.Reply(nanoid)
+		fsmCommand.Reply(nanoid)
 	}
 }
