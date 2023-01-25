@@ -88,3 +88,16 @@ func (n *Node) Submit(input *FSMInput) {
 		n.commitChan <- input
 	}()
 }
+
+// callRemoteProcedure calls the given procedure on the given node and returns the result
+// Possible methods:
+// - AppendEntries
+// - RequestVote
+func (n *Node) callRemoteProcedure(method string, peerId int, args interface{}, reply *interface{}) {
+	client := n.peers[peerId]
+	serviceMethod := "ConsensusModule." + method
+	err := client.Call(serviceMethod, args, reply)
+	if err != nil {
+		utils.Logf("RPC: error calling %s on node %d: %v", method, peerId, err)
+	}
+}
