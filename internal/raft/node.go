@@ -82,11 +82,14 @@ func (n *Node) connectToPeer(id int) {
 	utils.Logf("RPC: connected to node %d", id)
 }
 
-func (n *Node) Submit(command *FSMCommand) {
+// Submit a new command to the Raft cluster. Must be called only on the leader node and yields an error if not.
+// The command will be replicated to all other nodes and eventually committed.
+func (n *Node) Submit(command *FSMCommand) error {
 	go func() {
 		// TODO send command to leader's appendEntries backlog which in turn will send it to the commitChan
 		n.commitChan <- command
 	}()
+	return nil
 }
 
 // callRemoteProcedure calls the given procedure on the given node and returns the result
@@ -100,4 +103,9 @@ func (n *Node) callRemoteProcedure(method string, peerId int, args interface{}, 
 	if err != nil {
 		utils.Logf("RPC: error calling %s on node %d: %v", method, peerId, err)
 	}
+}
+
+func (n *Node) GetLeaderAddress() string {
+	// TODO implement in consensus module
+	return ":" + strconv.Itoa(n.usePortsFrom)
 }

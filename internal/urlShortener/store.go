@@ -3,7 +3,6 @@ package urlShortener
 import (
 	"github.com/bttger/url-shortener/internal/raft"
 	"github.com/bttger/url-shortener/internal/utils"
-	gonanoid "github.com/matoous/go-nanoid"
 	"sync"
 )
 
@@ -28,26 +27,31 @@ func (s *URLStore) GetURL(nanoid string) (string, bool) {
 	return url, ok
 }
 
-func (s *URLStore) AddURL(url string) string {
+type AddUrlCommand struct {
+	url    string
+	nanoid string
+}
+
+type AddUrlResult struct {
+	success bool
+}
+
+// AddURL adds a new URL mapping to the store and returns the nanoid.
+func (s *URLStore) AddURL(request AddUrlCommand) string {
 	s.Lock()
 	defer s.Unlock()
-	nanoid, ok := "", true
-	for ok {
-		nanoid = gonanoid.MustGenerate("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6)
-		_, ok = s.urls[nanoid]
-	}
-	s.urls[nanoid] = url
-	return nanoid
+	s.urls[request.nanoid] = request.url
+	return request.nanoid
 }
 
 func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMCommand) {
 	utils.Logf("URLStore: start listening to new commits")
 	for {
 		fsmCommand := <-commitChan
-		utils.Logf("Received new committed command: %s", fsmCommand.GetCommand())
-		url := fsmCommand.GetCommand()
-		nanoid := s.AddURL(url.(string))
-		utils.Logf("Added new URL mapping: %s -> %s", nanoid, url)
-		fsmCommand.Reply(nanoid)
+		utils.Logf("Received new committed command: %v", fsmCommand.GetCommand())
+		command := fsmCommand.GetCommand().(AddUrlCommand)
+		s.AddURL(command)
+		utils.Logf("Added new URL mapping: %s -> %s", command.url, command.nanoid)
+		fsmCommand.Reply(AddUrlResult{success: true})
 	}
 }

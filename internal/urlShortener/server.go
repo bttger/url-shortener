@@ -1,8 +1,10 @@
 package urlShortener
 
 import (
+	"encoding/json"
 	"github.com/bttger/url-shortener/internal/raft"
 	"github.com/bttger/url-shortener/internal/utils"
+	gonanoid "github.com/matoous/go-nanoid"
 	"io"
 	"log"
 	"net/http"
@@ -12,13 +14,23 @@ import (
 )
 
 const (
-	// PostTimeout is the timeout in seconds to wait for a leader reply on write requests
-	PostTimeout = 5
+	// PostTimeout is the timeout to wait for a leader reply on write requests
+	PostTimeout = 5 * time.Second
 )
 
 type Server struct {
 	store *URLStore
 	rn    *raft.Node
+}
+
+type FoundLeader struct {
+	Message string `json:"message"`
+	Address string `json:"address"`
+}
+
+type ShortenedUrl struct {
+	Url         string `json:"url"`
+	RedirectsTo string `json:"redirectsTo"`
 }
 
 func Start(port int, store *URLStore, raftNode *raft.Node) {
@@ -39,23 +51,63 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
-		url := string(body)
-		respChannel := make(chan interface{})
-		fsmCommand := raft.NewFSMCommand(url, respChannel)
-		s.rn.Submit(fsmCommand)
 
-		// Wait for the response from the leader or timeout after PostTimeout seconds
-		select {
-		case res := <-respChannel:
-			w.WriteHeader(http.StatusOK)
-			_, err := w.Write([]byte(res.(string)))
+		// Generate a random ID for the URL which is not already in use
+		nanoid, ok := "", true
+		for ok {
+			nanoid = gonanoid.MustGenerate("0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ", 6)
+			_, ok = s.store.GetURL(nanoid)
+		}
+		resultChan := make(chan interface{})
+		addUrlCommand := AddUrlCommand{
+			url:    string(body),
+			nanoid: nanoid,
+		}
+
+		// Create a new FSM command and submit it to the Raft node
+		fsmCommand := raft.NewFSMCommand(addUrlCommand, resultChan)
+		err = s.rn.Submit(fsmCommand)
+		if err != nil {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict)
+			jsonData, err := json.Marshal(FoundLeader{Message: "No leader available", Address: s.rn.GetLeaderAddress()})
 			if err != nil {
-				utils.Logf("Error writing response: %v", err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
 			}
-		case <-time.After(PostTimeout * time.Second):
+			_, err = w.Write(jsonData)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			return
+		}
+
+		// Wait for the result from the leader or timeout after PostTimeout seconds
+		select {
+		case res := <-resultChan:
+			result := res.(AddUrlResult)
+			if result.success {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				jsonData, err := json.Marshal(ShortenedUrl{Url: "http://" + r.Host + "/" + addUrlCommand.nanoid, RedirectsTo: addUrlCommand.url})
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				_, err = w.Write(jsonData)
+				if err != nil {
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			} else {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+		case <-time.After(PostTimeout):
 			fsmCommand.SetClientConnected(false)
 			w.WriteHeader(http.StatusRequestTimeout)
-			utils.Logf("Timeout on POST request for url %s", url)
+			utils.Logf("Timeout on POST request for url %s", addUrlCommand.url)
 		}
 	} else if r.Method == "GET" {
 		nanoid := strings.Split(r.URL.Path, "/")[1]

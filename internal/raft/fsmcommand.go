@@ -10,16 +10,16 @@ type FSMCommand struct {
 	mut             sync.Mutex
 	command         interface{}
 	clientConnected bool
-	// respChannel is a channel that the FSM will send the response to after the command has been applied.
-	respChannel chan interface{}
+	// resultChan is a channel that the FSM will send the response to after the command has been applied.
+	resultChan chan interface{}
 }
 
-func NewFSMCommand(command interface{}, respChannel chan interface{}) *FSMCommand {
+func NewFSMCommand(command interface{}, resultChan chan interface{}) *FSMCommand {
 	return &FSMCommand{
 		mut:             sync.Mutex{},
 		command:         command,
 		clientConnected: true,
-		respChannel:     respChannel,
+		resultChan:      resultChan,
 	}
 }
 
@@ -41,12 +41,12 @@ func (c *FSMCommand) SetClientConnected(v bool) {
 	c.clientConnected = v
 }
 
-// Reply sends the response to the client iff the client is still connected.
-func (c *FSMCommand) Reply(response interface{}) {
+// Reply sends the command result to the client iff the client is still connected.
+func (c *FSMCommand) Reply(result interface{}) {
 	c.mut.Lock()
 	defer c.mut.Unlock()
 	if c.clientConnected {
-		c.respChannel <- response
-		utils.Logf("Sent response to client: %s", response)
+		c.resultChan <- result
+		utils.Logf("FSMCommand: Sent result to client: %v", result)
 	}
 }
