@@ -73,5 +73,7 @@ type AppendEntriesReply struct {
 
 func (cm *ConsensusModule) AppendEntries(args AppendEntriesArgs, reply *AppendEntriesReply) error {
 	utils.Logf("AppendEntries: %+v", args)
+	reply.Success = true
+	reply.Term = cm.currentTerm
 	return nil
 }

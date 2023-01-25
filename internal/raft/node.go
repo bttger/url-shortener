@@ -20,7 +20,6 @@ type Node struct {
 	clusterSize  int
 	usePortsFrom int
 	commitChan   chan *FSMInput
-	rpcServer    *rpc.Server
 	cm           *ConsensusModule
 	peers        map[int]*rpc.Client
 }
@@ -32,7 +31,6 @@ func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMInput) *Node
 		clusterSize:  clusterSize,
 		usePortsFrom: usePortsFrom,
 		commitChan:   commitChan,
-		rpcServer:    rpc.NewServer(),
 		cm:           nil,
 		peers:        make(map[int]*rpc.Client),
 	}
@@ -48,12 +46,12 @@ func (n *Node) JoinCluster() {
 		utils.Logf("Error listening: %v", err)
 	}
 
-	err = n.rpcServer.RegisterName("CM", n.cm)
+	err = rpc.Register(n.cm)
 	if err != nil {
 		utils.Logf("Error registering RPC service: %v", err)
 	}
 	go rpc.Accept(listener)
-	utils.Logf("RPC service listening on port %d", n.usePortsFrom+n.clusterSize+n.id-1)
+	utils.Logf("RPC: listening on port %d", n.usePortsFrom+n.clusterSize+n.id-1)
 
 	utils.Logf("RPC: connecting to other nodes")
 	for i := 1; i <= n.clusterSize; i++ {
