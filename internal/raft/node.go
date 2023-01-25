@@ -1,6 +1,7 @@
 package raft
 
 import (
+	"fmt"
 	"github.com/bttger/url-shortener/internal/utils"
 	"net"
 	"net/rpc"
@@ -34,7 +35,7 @@ func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMCommand) *No
 		cm:           nil,
 		peers:        make(map[int]*rpc.Client),
 	}
-	node.cm = NewConsensusModule(node)
+	node.cm = newConsensusModule(node)
 	return node
 }
 
@@ -53,17 +54,22 @@ func (n *Node) JoinCluster() {
 	go rpc.Accept(listener)
 	utils.Logf("RPC: listening on port %d", n.usePortsFrom+n.clusterSize+n.id-1)
 
-	utils.Logf("RPC: connecting to other nodes")
 	for i := 1; i <= n.clusterSize; i++ {
 		if i == n.id {
 			continue
 		}
-		utils.Logf("RPC: connecting to node %d", i)
-		n.connectToPeer(i)
+		utils.Logf("RPC: start connecting to node %d", i)
+		err := n.connectToPeer(i)
+		if err != nil {
+			os.Exit(1)
+		}
 	}
+	n.cm.start() // TODO I think I should be able to start the consensus module before connecting to all peers
 }
 
-func (n *Node) connectToPeer(id int) {
+// connectToPeer connects to the given peer and adds it to the list of peers. If the connection fails, it will retry
+// until for a maximum of dialRetryCount times with a delay of dialRetryInterval.
+func (n *Node) connectToPeer(id int) error {
 	var client *rpc.Client
 	var err error
 	for i := 0; i < dialRetryCount; i++ {
@@ -76,15 +82,19 @@ func (n *Node) connectToPeer(id int) {
 	}
 	if err != nil {
 		utils.Logf("RPC: error dialing node %d: %v", id, err)
-		os.Exit(1)
+		return err
 	}
 	n.peers[id] = client
 	utils.Logf("RPC: connected to node %d", id)
+	return nil
 }
 
 // Submit a new command to the Raft cluster. Must be called only on the leader node and yields an error if not.
 // The command will be replicated to all other nodes and eventually committed.
 func (n *Node) Submit(command *FSMCommand) error {
+	if n.cm.GetState() != Leader {
+		return fmt.Errorf("not leader")
+	}
 	go func() {
 		// TODO send command to leader's appendEntries backlog which in turn will send it to the commitChan
 		n.commitChan <- command
@@ -92,17 +102,19 @@ func (n *Node) Submit(command *FSMCommand) error {
 	return nil
 }
 
-// callRemoteProcedure calls the given procedure on the given node and returns the result
+// callRemoteProcedure calls the given procedure on the given node, waits, and returns the result.
 // Possible methods:
 // - AppendEntries
 // - RequestVote
-func (n *Node) callRemoteProcedure(method string, peerId int, args interface{}, reply *interface{}) {
+func (n *Node) callRemoteProcedure(method string, peerId int, args any, reply any) error {
 	client := n.peers[peerId]
 	serviceMethod := "ConsensusModule." + method
 	err := client.Call(serviceMethod, args, reply)
 	if err != nil {
 		utils.Logf("RPC: error calling %s on node %d: %v", method, peerId, err)
+		return err
 	}
+	return nil
 }
 
 func (n *Node) GetLeaderAddress() string {
