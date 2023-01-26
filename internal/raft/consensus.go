@@ -15,10 +15,12 @@ const (
 	Leader
 )
 
-// electionTimeout is the time a follower waits for a heartbeat from the leader before starting an election.
-const electionTimeout = 150 * time.Millisecond
-const electionTimeoutRandomAddition = 150
-const heartbeatInterval = 50 * time.Millisecond
+const (
+	timeoutDebugAddend            = 5 * time.Second
+	electionTimeout               = 150*time.Millisecond + timeoutDebugAddend
+	electionTimeoutRandomAddition = 150
+	heartbeatInterval             = 50*time.Millisecond + timeoutDebugAddend
+)
 
 type LogEntry struct {
 	Term       int
