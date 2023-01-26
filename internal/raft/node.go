@@ -117,7 +117,9 @@ func (n *Node) callRemoteProcedure(method string, peerId int, args any, reply an
 	return nil
 }
 
-func (n *Node) GetLeaderAddress() string {
-	// TODO implement in consensus module
-	return ":" + strconv.Itoa(n.usePortsFrom)
+// GetLeaderId returns the id of the current leader. If there is no leader, it returns 0.
+func (n *Node) GetLeaderId() int {
+	n.cm.Lock()
+	defer n.cm.Unlock()
+	return n.cm.leaderId
 }

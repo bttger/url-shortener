@@ -24,8 +24,8 @@ type Server struct {
 }
 
 type FoundLeader struct {
-	Message string `json:"message"`
-	Address string `json:"address"`
+	Message  string `json:"message"`
+	LeaderId int    `json:"leaderId"`
 }
 
 type ShortenedUrl struct {
@@ -70,7 +70,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
-			jsonData, err := json.Marshal(FoundLeader{Message: "No leader available", Address: s.rn.GetLeaderAddress()})
+			jsonData, err := json.Marshal(FoundLeader{Message: "Not a leader node", LeaderId: s.rn.GetLeaderId()})
 			if err != nil {
 				w.WriteHeader(http.StatusInternalServerError)
 				return

@@ -37,10 +37,11 @@ type ConsensusModule struct {
 	log         []LogEntry
 
 	// Volatile state on all servers
-	state              NodeState
 	commitIndex        int // -1 at initialization; deviates from Raft paper since we use 0-based indexing for the log
 	lastApplied        int // -1 at initialization; deviates from Raft paper since we use 0-based indexing for the log
+	state              NodeState
 	electionResetEvent time.Time
+	leaderId           int
 
 	// Volatile state on leaders (reinitialized after election)
 	nextIndex  map[int]int
@@ -55,10 +56,11 @@ func newConsensusModule(node *Node) *ConsensusModule {
 		currentTerm:        0,
 		votedFor:           0,
 		log:                make([]LogEntry, 0),
-		state:              Follower,
 		commitIndex:        -1,
 		lastApplied:        -1,
+		state:              Follower,
 		electionResetEvent: time.Time{},
+		leaderId:           0,
 		nextIndex:          nil,
 		matchIndex:         nil,
 	}
@@ -145,6 +147,7 @@ func (cm *ConsensusModule) becomeLeader() {
 	utils.Logf("Becoming leader")
 	cm.Lock()
 	cm.state = Leader
+	cm.leaderId = cm.node.id
 	cm.nextIndex = make(map[int]int, cm.node.clusterSize)
 	cm.matchIndex = make(map[int]int, cm.node.clusterSize)
 

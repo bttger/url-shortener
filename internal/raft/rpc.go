@@ -111,6 +111,7 @@ func (cm *ConsensusModule) AppendEntries(args AppendEntriesArgs, reply *AppendEn
 
 	// After we made sure all conditions are met and that there is a valid leader, we can reset the election timer.
 	cm.resetElectionTimer("received AppendEntries RPC")
+	cm.leaderId = args.LeaderId
 
 	// If an existing entry conflicts with a new one (same index but different terms), delete the existing entry and
 	// all that follow it (§5.3). This can happen if the leader has been partitioned away from the rest of the cluster
