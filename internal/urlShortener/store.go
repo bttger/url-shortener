@@ -45,7 +45,7 @@ func (s *URLStore) AddURL(request AddUrlCommand) string {
 }
 
 func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMCommand) {
-	utils.Logf("URLStore: start listening to new commits")
+	utils.Logf("URLStore: start listening to new committed commands")
 	for {
 		fsmCommand := <-commitChan
 		utils.Logf("Received new committed command: %v", fsmCommand.GetCommand())
