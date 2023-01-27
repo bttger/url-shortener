@@ -10,7 +10,7 @@ type ClientRequest struct {
 	mut             sync.Mutex
 	fsmCommand      interface{}
 	clientConnected bool
-	// resultChan is a channel that the FSM will send the response to after the fsmCommand has been applied.
+	// resultChan is a channel that the node will send the response to after the fsmCommand has been applied.
 	resultChan chan interface{}
 }
 
