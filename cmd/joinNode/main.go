@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/gob"
 	"fmt"
 	"github.com/bttger/url-shortener/internal/raft"
 	"github.com/bttger/url-shortener/internal/urlShortener"
@@ -21,8 +22,11 @@ func main() {
 		os.Exit(1)
 	}
 
+	// Register the types that will be sent over the network
+	gob.Register(urlShortener.AddUrlCommand{})
+
 	// Create a new finite-state machine and let it listen for new committed commands
-	commitChan := make(chan *raft.FSMCommand)
+	commitChan := make(chan raft.Commit)
 	store := urlShortener.NewURLStore()
 	go store.ListenToNewCommits(commitChan)
 

@@ -126,7 +126,10 @@ func (cm *ConsensusModule) AppendEntries(args AppendEntriesArgs, reply *AppendEn
 	// If leaderCommit > commitIndex, set commitIndex = min(leaderCommit, index of last new entry)
 	if args.CommitIndex > cm.commitIndex {
 		cm.commitIndex = utils.IntMin(args.CommitIndex, len(cm.log)-1)
-		// TODO: apply committed entries to state machine, set lastApplied
+
+		for i := cm.lastApplied + 1; i <= cm.commitIndex; i++ {
+			cm.commitAndApplyLogEntry(i, false)
+		}
 	}
 
 	reply.Success = true

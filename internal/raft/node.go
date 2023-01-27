@@ -15,17 +15,21 @@ const (
 	dialRetryCount    = 5
 )
 
-// TODO mutex needed for local methods?
+type Commit struct {
+	FsmCommand interface{}
+	ResultChan chan interface{}
+}
+
 type Node struct {
 	id           int
 	clusterSize  int
 	usePortsFrom int
-	commitChan   chan *FSMCommand
+	commitChan   chan Commit
 	cm           *ConsensusModule
 	peers        map[int]*rpc.Client
 }
 
-func NewNode(id, clusterSize, usePortsFrom int, commitChan chan *FSMCommand) *Node {
+func NewNode(id, clusterSize, usePortsFrom int, commitChan chan Commit) *Node {
 	utils.Logf("Initializing Raft node")
 	node := &Node{
 		id:           id,
@@ -89,16 +93,20 @@ func (n *Node) connectToPeer(id int) error {
 	return nil
 }
 
-// Submit a new command to the Raft cluster. Must be called only on the leader node and yields an error if not.
-// The command will be replicated to all other nodes and eventually committed.
-func (n *Node) Submit(command *FSMCommand) error {
+// Submit a new FsmCommand to the Raft cluster. Must be called only on the leader node and yields an error if not.
+// The FsmCommand will be replicated to all other nodes and eventually committed.
+func (n *Node) Submit(clientRequest *ClientRequest) error {
 	if n.cm.GetState() != Leader {
 		return fmt.Errorf("not leader")
 	}
-	go func() {
-		// TODO send command to leader's appendEntries backlog which in turn will send it to the commitChan
-		n.commitChan <- command
-	}()
+	n.cm.Lock()
+	defer n.cm.Unlock()
+	n.cm.log = append(n.cm.log, LogEntry{
+		Term:       n.cm.currentTerm,
+		FsmCommand: clientRequest.fsmCommand,
+	})
+	n.cm.clientRequests[len(n.cm.log)-1] = clientRequest
+	utils.Logf("Client request submitted to local log: %v", clientRequest.fsmCommand)
 	return nil
 }
 

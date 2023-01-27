@@ -60,13 +60,13 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		}
 		resultChan := make(chan interface{})
 		addUrlCommand := AddUrlCommand{
-			url:    string(body),
-			nanoid: nanoid,
+			Url:    string(body),
+			Nanoid: nanoid,
 		}
 
 		// Create a new FSM command and submit it to the Raft node
-		fsmCommand := raft.NewFSMCommand(addUrlCommand, resultChan)
-		err = s.rn.Submit(fsmCommand)
+		clientRequest := raft.NewClientRequest(addUrlCommand, resultChan)
+		err = s.rn.Submit(clientRequest)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusConflict)
@@ -90,7 +90,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 			if result.success {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusCreated)
-				jsonData, err := json.Marshal(ShortenedUrl{Url: "http://" + r.Host + "/" + addUrlCommand.nanoid, RedirectsTo: addUrlCommand.url})
+				jsonData, err := json.Marshal(ShortenedUrl{Url: "http://" + r.Host + "/" + addUrlCommand.Nanoid, RedirectsTo: addUrlCommand.Url})
 				if err != nil {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
@@ -105,9 +105,9 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-time.After(PostTimeout):
-			fsmCommand.SetClientConnected(false)
+			clientRequest.SetClientConnected(false)
 			w.WriteHeader(http.StatusRequestTimeout)
-			utils.Logf("Timeout on POST request for url %s", addUrlCommand.url)
+			utils.Logf("Timeout on POST request for url %s", addUrlCommand.Url)
 		}
 	} else if r.Method == "GET" {
 		nanoid := strings.Split(r.URL.Path, "/")[1]

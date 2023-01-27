@@ -44,8 +44,9 @@ type ConsensusModule struct {
 	leaderId           int
 
 	// Volatile state on leaders (reinitialized after election)
-	nextIndex  map[int]int
-	matchIndex map[int]int // -1 at initialization; deviates from Raft paper since we use 0-based indexing for the log
+	nextIndex      map[int]int
+	matchIndex     map[int]int            // -1 at initialization; deviates from Raft paper since we use 0-based indexing for the log
+	clientRequests map[int]*ClientRequest // used to respond to client requests after they have been committed and applied
 }
 
 func newConsensusModule(node *Node) *ConsensusModule {
@@ -63,6 +64,7 @@ func newConsensusModule(node *Node) *ConsensusModule {
 		leaderId:           0,
 		nextIndex:          nil,
 		matchIndex:         nil,
+		clientRequests:     nil,
 	}
 }
 
@@ -150,6 +152,7 @@ func (cm *ConsensusModule) becomeLeader() {
 	cm.leaderId = cm.node.id
 	cm.nextIndex = make(map[int]int, cm.node.clusterSize)
 	cm.matchIndex = make(map[int]int, cm.node.clusterSize)
+	cm.clientRequests = make(map[int]*ClientRequest, 0)
 
 	for i := 1; i <= cm.node.clusterSize; i++ {
 		cm.nextIndex[i] = len(cm.log)
@@ -246,11 +249,10 @@ func (cm *ConsensusModule) sendHeartbeat() {
 							}
 						}
 						if matchCount*2 > cm.node.clusterSize {
-							cm.commitIndex = i
+							cm.commitAndApplyLogEntry(i, true)
 						}
 					}
 				}
-				// TODO: apply committed entries to state machine, set lastApplied, and notify client
 				cm.Unlock()
 			}
 		}(peerId)
@@ -325,4 +327,28 @@ func (cm *ConsensusModule) GetState() NodeState {
 	cm.Lock()
 	defer cm.Unlock()
 	return cm.state
+}
+
+// commitAndApplyLogEntry commits the given log entry and applies it to the FSM. Expects the lock of the consensus
+// module to be held.
+func (cm *ConsensusModule) commitAndApplyLogEntry(index int, replyToClient bool) {
+	resultChan := make(chan interface{})
+	cm.node.commitChan <- Commit{
+		FsmCommand: cm.log[index].FsmCommand,
+		ResultChan: resultChan,
+	}
+	cm.commitIndex = index
+	utils.Logf("Committed log entry at index %d", index)
+
+	go func() {
+		result := <-resultChan
+		cm.Lock()
+		cm.lastApplied = index
+		if replyToClient {
+			cm.clientRequests[index].Reply(result)
+			delete(cm.clientRequests, index)
+		}
+		cm.Unlock()
+		utils.Logf("Applied log entry at index %d", index)
+	}()
 }

@@ -28,8 +28,8 @@ func (s *URLStore) GetURL(nanoid string) (string, bool) {
 }
 
 type AddUrlCommand struct {
-	url    string
-	nanoid string
+	Url    string
+	Nanoid string
 }
 
 type AddUrlResult struct {
@@ -40,18 +40,19 @@ type AddUrlResult struct {
 func (s *URLStore) AddURL(request AddUrlCommand) string {
 	s.Lock()
 	defer s.Unlock()
-	s.urls[request.nanoid] = request.url
-	return request.nanoid
+	s.urls[request.Nanoid] = request.Url
+	return request.Nanoid
 }
 
-func (s *URLStore) ListenToNewCommits(commitChan chan *raft.FSMCommand) {
+// ListenToNewCommits listens to newly committed fsmCommands and applies them to the finite-state machine.
+func (s *URLStore) ListenToNewCommits(commitChan chan raft.Commit) {
 	utils.Logf("URLStore: start listening to new committed commands")
 	for {
-		fsmCommand := <-commitChan
-		utils.Logf("Received new committed command: %v", fsmCommand.GetCommand())
-		command := fsmCommand.GetCommand().(AddUrlCommand)
-		s.AddURL(command)
-		utils.Logf("Added new URL mapping: %s -> %s", command.url, command.nanoid)
-		fsmCommand.Reply(AddUrlResult{success: true})
+		commit := <-commitChan
+		cmd := commit.FsmCommand.(AddUrlCommand)
+		utils.Logf("FSM: Received new committed command: %v", cmd)
+		s.AddURL(cmd)
+		utils.Logf("FSM: Added new URL mapping: %s -> %s", cmd.Url, cmd.Nanoid)
+		commit.ResultChan <- AddUrlResult{success: true}
 	}
 }
