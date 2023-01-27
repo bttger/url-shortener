@@ -1,7 +1,7 @@
 package raft
 
 import (
-	"github.com/bttger/url-shortener/internal/utils"
+	"github.com/bttger/url-shortener/pkg/utils"
 	"sync"
 )
 

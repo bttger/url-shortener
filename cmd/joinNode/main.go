@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/gob"
 	"fmt"
-	"github.com/bttger/url-shortener/internal/raft"
 	"github.com/bttger/url-shortener/internal/urlShortener"
+	"github.com/bttger/url-shortener/pkg/raft"
 	"os"
 	"strconv"
 )

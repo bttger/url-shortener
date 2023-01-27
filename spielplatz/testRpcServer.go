@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/bttger/url-shortener/internal/utils"
+	"github.com/bttger/url-shortener/pkg/utils"
 	"net"
 	"net/rpc"
 	"time"

@@ -2,7 +2,7 @@ package raft
 
 import (
 	"fmt"
-	"github.com/bttger/url-shortener/internal/utils"
+	"github.com/bttger/url-shortener/pkg/utils"
 	"net"
 	"net/rpc"
 	"os"

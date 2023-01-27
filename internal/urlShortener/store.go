@@ -1,8 +1,8 @@
 package urlShortener
 
 import (
-	"github.com/bttger/url-shortener/internal/raft"
-	"github.com/bttger/url-shortener/internal/utils"
+	"github.com/bttger/url-shortener/pkg/raft"
+	"github.com/bttger/url-shortener/pkg/utils"
 	"sync"
 )
 
