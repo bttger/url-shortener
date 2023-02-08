@@ -272,7 +272,7 @@ func (cm *ConsensusModule) startElectionTimer() {
 	timeout := electionTimeout + randomAddition
 	ticker := time.NewTicker(10 * time.Millisecond)
 	defer ticker.Stop()
-	utils.Logf("Started election timer (%d) with timeout of %vms", termStarted, timeout)
+	utils.Logf("Started election timer (%d) with timeout of %v", termStarted, timeout)
 
 	for {
 		<-ticker.C
