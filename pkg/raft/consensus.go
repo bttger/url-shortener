@@ -267,7 +267,7 @@ func (cm *ConsensusModule) startElectionTimer() {
 	cm.resetElectionTimer("new election timer about to start")
 	cm.Unlock()
 
-	rand.Seed(time.Now().UnixNano())
+	rand.New(rand.NewSource(time.Now().UnixNano()))
 	randomAddition := time.Duration(rand.Intn(electionTimeoutRandomAddition)) * time.Millisecond
 	timeout := electionTimeout + randomAddition
 	ticker := time.NewTicker(10 * time.Millisecond)
