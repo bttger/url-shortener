@@ -45,7 +45,7 @@ li {
 </style>
 
 - `E[r] = processingTime + networkRoundtrip`
-- `E[w] = (heartbeatInterval + networkRoundtripQuorum) / 2 + networkRoundtrip`
+- `E[w] = heartbeatInterval/2 + networkRoundtripQuorum + networkRoundtrip`
 
 ---
 

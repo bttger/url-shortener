@@ -55,7 +55,7 @@ At least 3 nodes are required to establish a quorum.
 
 ## Measure the latency to generate a new short URL
 
-On average, a write request takes `E[w] = (heartbeatInterval + networkRoundtripQuorum) / 2 + networkRoundtrip` to finish (neglecting the processing time) since the client must wait for the leader to commit and apply the FSM command. The log entries are only sent with every heartbeat, so the client must wait for the next heartbeat to receive a response.
+On average, a write request takes `E[w] = heartbeatInterval/2 + networkRoundtripQuorum + networkRoundtrip` to finish (neglecting the processing time) since the client must wait for the leader to commit and apply the FSM command. The log entries are only sent with every heartbeat, so the client must wait for the next heartbeat to receive a response.
 
 On the other hand, a read request takes only a few milliseconds `E[r] = processingTime + networkRoundtrip` since the client can directly query the state machine.
 
