@@ -2,7 +2,7 @@ package urlShortener
 
 import (
 	"encoding/json"
-	raft2 "github.com/bttger/url-shortener/pkg/raft"
+	"github.com/bttger/url-shortener/pkg/raft"
 	"github.com/bttger/url-shortener/pkg/utils"
 	gonanoid "github.com/matoous/go-nanoid"
 	"io"
@@ -20,7 +20,7 @@ const (
 
 type Server struct {
 	store *URLStore
-	rn    *raft2.Node
+	rn    *raft.Node
 }
 
 type FoundLeader struct {
@@ -33,7 +33,7 @@ type ShortenedUrl struct {
 	RedirectsTo string `json:"redirectsTo"`
 }
 
-func Start(port int, store *URLStore, raftNode *raft2.Node) {
+func Start(port int, store *URLStore, raftNode *raft.Node) {
 	s := &Server{
 		store: store,
 		rn:    raftNode,
@@ -65,7 +65,7 @@ func (s *Server) handle(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Create a new FSM command and submit it to the Raft node
-		clientRequest := raft2.NewClientRequest(addUrlCommand, resultChan)
+		clientRequest := raft.NewClientRequest(addUrlCommand, resultChan)
 		err = s.rn.Submit(clientRequest)
 		if err != nil {
 			w.Header().Set("Content-Type", "application/json")
